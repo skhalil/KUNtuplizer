@@ -1,0 +1,7 @@
+import FWCore.ParameterSet.Config as cms
+
+ana = cms.EDAnalyzer('KUNtuplizer',
+    genParts    = cms.InputTag("packedGenParticles"),    
+    vertices    = cms.InputTag("offlineSlimmedPrimaryVertices"),
+    puInfo      = cms.InputTag("slimmedAddPileupInfo"),
+)
