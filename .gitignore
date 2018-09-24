@@ -1,0 +1,7 @@
+# Output source #
+###################
+*.root
+
+# Logs and databases #
+######################
+*.log
