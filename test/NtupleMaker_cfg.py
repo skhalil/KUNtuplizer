@@ -17,7 +17,7 @@ options.register('DataProcessing',
      'MC_Fall17MiniAOD',
      opts.VarParsing.multiplicity.singleton,
      opts.VarParsing.varType.string,
-    'Data processing types. Options are:\
+     'Data processing types. Options are:\
         Data_94x, MC_Fall17MiniAOD' )
 
 options.register('outputLabel',
@@ -25,6 +25,12 @@ options.register('outputLabel',
      opts.VarParsing.multiplicity.singleton,
      opts.VarParsing.varType.string,
      'Output label')
+
+options.register('globalTag',
+     '',
+     opts.VarParsing.multiplicity.singleton,
+     opts.VarParsing.varType.string,
+     'Global Tag')
 
 options.register('wantSummary',
       True,
