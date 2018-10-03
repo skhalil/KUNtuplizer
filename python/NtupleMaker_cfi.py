@@ -1,7 +1,25 @@
 import FWCore.ParameterSet.Config as cms
 
 makeNtuples = cms.EDAnalyzer('KUNtuplizer',
-    genParts    = cms.InputTag("packedGenParticles"),    
-    vertices    = cms.InputTag("offlineSlimmedPrimaryVertices"),
-    puInfo      = cms.InputTag("slimmedAddPileupInfo"),
+    genParts          = cms.InputTag("packedGenParticles"),    
+    vertices          = cms.InputTag("offlineSlimmedPrimaryVertices"),
+    puInfo            = cms.InputTag("slimmedAddPileupInfo"),
+    electrons         = cms.InputTag("slimmedElectrons"),
+    muons             = cms.InputTag("slimmedMuons"),
+    photons           = cms.InputTag("slimmedPhotons"),
+    beamspot          = cms.InputTag("offlineBeamSpot"),
+    conversions       = cms.InputTag("reducedEgamma", "reducedConversions", "PAT"),
+    packedPFCands     = cms.InputTag("packedPFCandidates"),
+    genJets           = cms.InputTag("slimmedGenJets"), 
+    rho               = cms.InputTag("fixedGridRhoFastjetAll"), 
+    jets              = cms.InputTag("slimmedJets"),
+    jetsPuppi         = cms.InputTag("slimmedJetsPuppi"),
+    jetsAk8           = cms.InputTag("slimmedJetsAK8"),
+    mets              = cms.InputTag("slimmedMETs"),
+    metsPuppi         = cms.InputTag("slimmedMETsPuppi"),
+    metNoHF           = cms.InputTag("slimmedMETsNoHF"),
+    subjetsAk8        = cms.InputTag("slimmedJetsAK8PFCHSSoftDropPacked:SubJets"),
+    triggerResults    = cms.InputTag("TriggerResults"),
+    triggerSummary    = cms.InputTag("hltTriggerSummaryAOD"),
+    hltElectronFilter = cms.InputTag("hltL1sL1Mu3p5EG12ORL1MuOpenEG12L3Filtered8")
 )

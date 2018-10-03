@@ -4,34 +4,76 @@
 <use name="FWCore/MessageLogger"/>
 <use name="FWCore/ServiceRegistry"/>
 <use name="CommonTools/UtilAlgos"/>
-
+<use name="CommonTools/Statistics"/>
 <use name="DataFormats/VertexReco"/>
+<use name="DataFormats/ParticleFlowCandidate"/>
+<use name="DataFormats/ParticleFlowReco"/>
 <use name="DataFormats/HepMCCandidate"/>
 <use name="DataFormats/PatCandidates"/>
 <use name="DataFormats/Candidate"/>
+<use name="DataFormats/RecoCandidate"/>
 <use name="DataFormats/TrackReco"/>
-<use name="DataFormats/MuonReco"/>
-<use name="DataFormats/JetReco"/>
-<use name="DataFormats/EgammaCandidates"/>
 <use name="DataFormats/Common"/>
-<use name="DataFormats/ParticleFlowCandidate"/>
-<use name="DataFormats/METReco"/>
 <use name="DataFormats/Math"/>
+<use name="DataFormats/DetId"/>
+<use name="DataFormats/EcalDetId"/>
+<use name="DataFormats/TrackReco"/>
+<use name="DataFormats/FEDRawData"/>
+
+<use name="DataFormats/EcalRecHit"/>
+<use name="DataFormats/EgammaReco"/>
+<use name="DataFormats/HcalIsolatedTrack"/>
+<use name="DataFormats/EgammaCandidates"/>
 <use name="EgammaAnalysis/ElectronTools"/>
+<use name="RecoEgamma/EgammaTools"/>
+
+<use name="DataFormats/MuonReco"/>
+<use name="DataFormats/CSCRecHit"/>
+<use name="DataFormats/MuonDetId"/>
+<use name="RecoMuon/TrackingTools"/>
+
+<use name="DataFormats/JetReco"/>
+<use name="DataFormats/METReco"/>
+<use name="RecoVertex/AdaptiveVertexFit"/>
+<use name="RecoLocalCalo/EcalRecAlgos"/>
+<use name="RecoJets/JetProducers"/>
+<use name="JetMETCorrections/Algorithms"/>
+<use name="JetMETCorrections/Objects"/>
+<use name="JetMETCorrections/Modules"/>
 
 <use name="TrackingTools/TransientTrack"/>
 <use name="TrackingTools/Records"/>
+<use name="SimTracker/Records"/>
 <use name="RecoVertex/VertexPrimitives"/>
 <use name="RecoVertex/KalmanVertexFit"/>
-<use name="SimTracker/Records"/>
 <use name="RecoVertex/KinematicFitPrimitives"/>
 <use name="RecoVertex/KinematicFit"/>
+<use name="PhysicsTools/UtilAlgos"/>
 <use name="PhysicsTools/CandUtils"/>
 <use name="PhysicsTools/SelectorUtils"/>
-<use name="RecoEgamma/EgammaTools"/>
-<use name="RecoEgamma/Phase2InterimID"/>
 
-<use name="Geometry/GEMGeometry"/>
-<use name="Geometry/GEMGeometryBuilder"/>
+<use name="CondFormats/DataRecord"/>
+<use name="CondFormats/EcalObjects"/>
+<use name="CondFormats/L1TObjects"/>
+<use name="DataFormats/L1Trigger"/>
+<use name="DataFormats/L1GlobalTrigger"/>
+<use name="DataFormats/L1GlobalMuonTrigger"/>
+<use name="DataFormats/L1GlobalCaloTrigger"/>
+<use name="DataFormats/EcalDigi"/>
+<use name="DataFormats/HLTReco"/>
+<use name="HLTrigger/HLTcore"/>
+<use name="RecoEcal/EgammaClusterAlgos"/>
+<use name="RecoEcal/EgammaCoreTools"/>
+<use name="CondFormats/HLTObjects"/>
+<use name="CalibCalorimetry/EcalLaserCorrection"/>
+<use name="CalibCalorimetry/EcalTPGTools"/>
+<use name="EventFilter/HcalRawToDigi"/>
+
+<use name="root"/>
+<use name="clhep"/>
+
 <use name="Geometry/Records"/>
+<use name="Geometry/TrackerGeometryBuilder"/>
+<use name="Geometry/EcalAlgo"/>
+<use name="Geometry/CSCGeometry"/>
 <flags EDM_PLUGIN="1"/>

@@ -54,18 +54,13 @@
 #include "RecoVertex/VertexPrimitives/interface/TransientVertex.h"
 #include "RecoVertex/KalmanVertexFit/interface/KalmanVertexFitter.h"
 #include "SimTracker/Records/interface/TrackAssociatorRecord.h"
-
-//#include "Geometry/Records/interface/MuonGeometryRecord.h"
-//#include "Geometry/GEMGeometry/interface/ME0EtaPartitionSpecs.h"
-//#include "Geometry/GEMGeometry/interface/ME0Geometry.h"
-
 #include "PhysicsTools/SelectorUtils/interface/PFJetIDSelectionFunctor.h"
 
 #include "Framework/KUNtuplizer/interface/EventInfoTree.h"
 #include "Framework/KUNtuplizer/interface/GenInfoTree.h"
-//#include "Framework/KUNtuplizer/interface/METTree.h"
-//#include "Framework/KUNtuplizer/interface/ElectronTree.h"
+#include "Framework/KUNtuplizer/interface/ElectronTree.h"
 //#include "Framework/KUNtuplizer/interface/MuonTree.h"
+//#include "Framework/KUNtuplizer/interface/METTree.h"
 //#include "Framework/KUNtuplizer/interface/JetTree.h"
 #include "TTree.h"
 #include "TFile.h"
@@ -93,15 +88,20 @@ class KUNtuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
 
       // ----------member data ---------------------------  
    edm::EDGetTokenT<std::vector<pat::PackedGenParticle>> genPartsToken_;
-   edm::EDGetTokenT<GenEventInfoProduct>         genToken_;
-   edm::EDGetTokenT<LHEEventProduct>             genlheToken_;
-   edm::InputTag                                 puInfo_;
-   edm::EDGetTokenT<std::vector<reco::Vertex>>   vtxToken_;
-
-   edm::Service<TFileService> fs_;
+   edm::EDGetTokenT<GenEventInfoProduct>            genToken_;
+   edm::EDGetTokenT<LHEEventProduct>                genlheToken_;
+   edm::InputTag                                    puInfo_;
+   edm::EDGetTokenT<std::vector<reco::Vertex>>      vtxToken_;
+   edm::EDGetTokenT<std::vector<pat::Electron>>     elecsToken_;
+   edm::EDGetTokenT<pat::PackedCandidateCollection> packedPFCands_;
+   edm::EDGetTokenT< reco::ConversionCollection >   conv_;
+   edm::EDGetTokenT< reco::BeamSpot >               beamSpot_;
+   edm::EDGetTokenT< double >                       rho_;
+   edm::Service<TFileService>                       fs_;
    TTree* tree_;    
    GenInfoTree   genevt_; 
    EventInfoTree evt_;
+   ElectronTree  ele_;
 };
 
 //
@@ -120,7 +120,12 @@ KUNtuplizer::KUNtuplizer(const edm::ParameterSet& iConfig):
    genToken_       (consumes<GenEventInfoProduct>(edm::InputTag("generator"))),
    genlheToken_    (consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer",""))),
    puInfo_         (iConfig.getParameter<edm::InputTag>("puInfo")),
-   vtxToken_ (consumes<std::vector<reco::Vertex>>(iConfig.getParameter<edm::InputTag>("vertices")))
+   vtxToken_       (consumes<std::vector<reco::Vertex>>(iConfig.getParameter<edm::InputTag>("vertices"))),
+   elecsToken_     (consumes<std::vector<pat::Electron>>(iConfig.getParameter<edm::InputTag>("electrons"))),
+   packedPFCands_  (consumes<pat::PackedCandidateCollection>(iConfig.getParameter<edm::InputTag>("packedPFCands"))), 
+   conv_           (consumes<reco::ConversionCollection>(iConfig.getParameter<edm::InputTag>("conversion"))),
+   beamSpot_       (consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpot"))), 
+   rho_            (consumes<double>(iConfig.getParameter<edm::InputTag>("rho"))) 
    
 {
    consumes<std::vector<PileupSummaryInfo>>(puInfo_);
@@ -151,6 +156,39 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    genevt_.clearTreeVectors(); 
    evt_.clearTreeVectors(); 
 
+   //Generator weights
+   float genwt = 1.0;
+   edm::Handle<GenEventInfoProduct> genInfo;
+   iEvent.getByToken( genToken_,genInfo);
+   
+   if (genInfo.isValid()){
+      genwt = genInfo->weight();
+      genwt /= std::abs(genwt);   
+   }
+   genevt_.genWt = genwt;
+   
+   //LHE weight
+   edm::Handle<LHEEventProduct> lheInfo;
+   iEvent.getByToken(genlheToken_, lheInfo);
+   
+   if(lheInfo.isValid()) {
+      int size = lheInfo->weights().size();
+      double asdd = 1.;
+      if (size != 0){
+         //asdd = lheInfo->weights()[0].wgt;
+         asdd = lheInfo->originalXWGTUP();
+      }
+      
+      genevt_.lheWtIDs.reserve(size);
+      genevt_.lheWts.reserve(size);
+      for(unsigned int i=0; i<lheInfo->weights().size(); ++i) {         
+         double asdde =lheInfo->weights()[i].wgt;
+         int asddeID = std::stoi(lheInfo->weights()[i].id);
+         genevt_.lheWtIDs.push_back(asddeID);
+         genevt_.lheWts.push_back(asdde/asdd);
+      }
+   }
+
    // Basic event info
    evt_.runno = iEvent.eventAuxiliary().run();
    evt_.lumisec = iEvent.eventAuxiliary().luminosityBlock();
@@ -160,10 +198,43 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    //Pileup
    edm::Handle<std::vector< PileupSummaryInfo > > puInfo;
    iEvent.getByLabel(puInfo_, puInfo);
-      
+   std::vector<PileupSummaryInfo>::const_iterator pvi;
+   for(pvi = puInfo->begin(); pvi != puInfo->end(); ++pvi) {
+      evt_.npuTrue = pvi->getTrueNumInteractions(); 
+      evt_.npuInt = pvi->getBunchCrossing(); 
+      evt_.puBX = pvi->getPU_NumInteractions();
+   }
+   
+   // Vertex
+   edm::Handle<reco::VertexCollection> vertices;
+   iEvent.getByToken(vtxToken_, vertices);
+
+   if (vertices->empty()) return;
+   evt_.npv=0; evt_.nGoodVtx = 0;
+   evt_.npv = vertices->size();
+   
+   int prVtx = -1;
+   // store the vertex related variables after basic PV selection
+   for (size_t i = 0; i < vertices->size(); i++) {
+      if (vertices->at(i).isFake()) continue;
+      if (vertices->at(i).ndof() <= 4) continue;
+      if (prVtx < 0) {prVtx = i; }
+      evt_.ndofVtx.push_back(vertices->at(i).ndof());
+      evt_.chi2Vtx.push_back(vertices->at(i).chi2());
+      evt_.zVtx.push_back(vertices->at(i).position().z());
+      evt_.rhoVtx.push_back(vertices->at(i).position().rho());
+      evt_.ptVtx.push_back(vertices->at(i).p4().pt());
+      evt_.nGoodVtx++;
+   }
+   auto primaryVertex=vertices->at(prVtx);   
+   
+   // Electrons
+  
+   
    edm::Handle<std::vector<pat::PackedGenParticle>> genParts;
    iEvent.getByToken(genPartsToken_, genParts);
-   std::cout << "???" << std::endl; 
+
+   //std::cout << "???" << std::endl; 
    tree_->Fill();
 }
 
@@ -187,6 +258,8 @@ void
 KUNtuplizer::beginJob()
 {
    tree_ = fs_->make<TTree>("kutree", "kutree") ;
+   evt_.RegisterTree(tree_, "SelectedEvt") ;
+   genevt_.RegisterTree(tree_, "GenEvt") ;
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
