@@ -12,6 +12,6 @@ scram b -j4
 ```
 To produce ntuple:
 ```
-cd test
+cd Framework/KUNtuplizer/test
 cmsRun NtuplerMaker_cfg.py
 ```
