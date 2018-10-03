@@ -7,7 +7,7 @@ cmsrel CMSSW_9_4_4
 cd CMSSW_9_4_4/src
 cmsenv
 git cms-init
-git clone git@github.com:skhail/KUNTuplizer.git Framework/KUNTuplizer
+git clone git@github.com:skhalil/KUNTuplizer.git Framework/KUNTuplizer
 scram b -j4
 ```
 To produce ntuple:
