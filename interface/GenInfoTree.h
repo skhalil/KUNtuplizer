@@ -12,10 +12,10 @@ public:
       lheWtIDs.clear();
       lheWts.clear();
    }
-   void RegisterTree(TTree* tree, std::string name="EventWeights"){
+   void RegisterTree(TTree* tree, std::string name="GenEvt"){
     tree->Branch((name+"_genWt").c_str(), &genWt, (name+"_genWt/F").c_str());  
-    tree->Branch((name+"_lheWts").c_str(), &lheWts, (name+"_lheWts/F").c_str());
-    tree->Branch((name+"_lheWtIDs").c_str(), &lheWtIDs, (name+"_lheWtIDs/F").c_str());
+    tree->Branch((name+"_lheWts").c_str(), &lheWts);
+    tree->Branch((name+"_lheWtIDs").c_str(), &lheWtIDs);
    } 
 
 };

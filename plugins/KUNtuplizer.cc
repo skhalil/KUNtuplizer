@@ -88,6 +88,9 @@ class KUNtuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
 
       static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
+   protected:
+      float catchInfsAndBound(const float& in,const float& replace_value, const float& lowerbound, const float& upperbound);
+      const float& catchInfs (const float& in,const float& replace_value);     
 
    private:
       virtual void beginRun(edm::Run const&, edm::EventSetup const&); 
@@ -297,98 +300,103 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       if(sv.pt() > ptMaxSV_) continue;//20
       h1_["cutflow"] -> Fill(2, genwt);
 
-
       //store the branches after gen particle matching
       bool isSVb = false; bool isbMeson = false; bool isbBaryon = false; 
       bool isSVc = false; bool iscMeson = false; bool iscBaryon = false;
       bool isSVgen = false;
+      float matchGenPt, matchGenEta, matchGenMass, matchGenPhi = 0.0;
+
       //for (const pat::PackedGenParticle & gp : *genParts) {
       for (const reco::GenParticle & gp : *genParts) {
          if(reco::deltaR(gp.p4(), sv.p4()) <= genPartdRSV_){//0.4
             
+            matchGenPt   = gp.p4().pt();
+            matchGenEta  = gp.p4().eta();
+            matchGenPhi  = gp.p4().phi();
+            matchGenMass = gp.p4().mass();
+
             isbMeson = abs(gp.pdgId())%5000 > 510 && abs(gp.pdgId())%5000 < 560;
             isbBaryon = abs(gp.pdgId()) > 5120 &&  abs(gp.pdgId()) < 5555;
             
             iscMeson = abs(gp.pdgId())%4000 > 410 && abs(gp.pdgId())%4000 < 460;
             iscBaryon = abs(gp.pdgId()) > 4120 &&  abs(gp.pdgId()) < 4445;
-            
+                       
             if      (abs(gp.pdgId()) == 5 || isbMeson || isbBaryon){isSVb=true;}
             else if (abs(gp.pdgId()) == 4 || iscMeson || iscBaryon){isSVc=true;}
             else    {isSVgen = true;}
-            
-            //std::cout << "gen partilce id: " << gp.pdgId() << ", isbMeson: " << isbMeson << ", isbBaryon: "<< isbBaryon << ", isSVb: "<< isSVb << std::endl;
-            //std::cout << "gen partilce id: " << gp.pdgId() << ", iscMeson: " << iscMeson << ", iscBaryon: "<< iscBaryon << ", isSVc: "<< isSVc << std::endl;
-            //std::cout << "gen partilce id matched to a gen particle: " << gp.pdgId() << ", isSVgen: "<< isSVgen << std::endl;
             break;
          }
       }
  
-      if(isSVb || isSVc || isSVgen) {
+      if(isSVb || isSVc || isSVgen) {h1_["cutflow"] -> Fill(3, genwt);}
+      else continue;
+
+      if(isSVb)                     {h1_["cutflow"] -> Fill(4, genwt);}
+
+      // rest of the selections will be stored as cutflow but will be not applied to store the ntuple branches
+      // ------------------------------
       
-         h1_["cutflow"] -> Fill(3, genwt);
-         //else continue;
-         
-         // rest of the selections will be stored as cutflow but will be not applied to store the ntuple branches
-         // ------------------------------
-         
-         //SV track separation from jets     
-         bool isSVInJetDir = false;      
-         for (const pat::Jet & jet : *ak4jets ){
-            GlobalVector flightDir(sv.vertex().x() - pv.x(), sv.vertex().y() - pv.y(), sv.vertex().z() - pv.z());
-            GlobalVector jetDir(jet.px(),jet.py(),jet.pz());
-            if(reco::deltaR(flightDir, jetDir ) <=  jetdRSV_) {//0.4
-               isSVInJetDir = true; break;}
-         }
-         bool cut4 = !isSVInJetDir;
-         if(cut4){h1_["cutflow"] -> Fill(4, genwt);}
-         
-         //distance in the transverse plane between the SV and PV
-         Measurement1D d2d= vdistXY.distance(pv, VertexState(RecoVertex::convertPos(sv.position()), RecoVertex::convertError(sv.error()))); 
-         bool cut5 = d2d.value() < d2dSV_;
-         if(cut4 && cut5){h1_["cutflow"] -> Fill(5, genwt);} //3
-         
-         //pointing angle (i.e. the angle between the sum of the momentum of the 
-         //tracks in the SV and the flight direction betwen PV and SV)  
-         double dx = (sv.vx() - pv.x()), dy = (sv.vy() - pv.y()), dz = (sv.vz() - pv.z());    
-         double cosPdotV = (dx * sv.px() + dy*sv.py() + dz*sv.pz())/(sv.p()*std::sqrt(dx * dx + dy * dy + dz * dz));
-         bool cut6 =  cosPdotV > cosPdotVSV_;    
-         if(cut4 && cut5 && cut6){ h1_["cutflow"] -> Fill(6, genwt);}//0.98
-         
-         //Number of tracks
-         double ndaus  = sv.numberOfDaughters();
-         bool cut7 = ndaus > ndauSV_;
-         if(cut4 && cut5 && cut6 && cut7){h1_["cutflow"] -> Fill(7, genwt);} //2 
-         
-         //significance of distance in 3d space point between the SV and PV
-         Measurement1D dl= vdist.distance(pv, VertexState(RecoVertex::convertPos(sv.position()), RecoVertex::convertError(sv.error())));
-         bool cut8 = dl.significance() > dlenSigSV_;
-         if(cut4 && cut5 && cut6 && cut7 && cut8){h1_["cutflow"] -> Fill(8, genwt);}//4
-         
-         //std::cout << "p4 of SV: pt = "  << sv.pt() << ", eta = "  << sv.eta() << ", phi = " << sv.phi() << ", energy = " << sv.energy() << std::endl;
-         //std::cout << "isSVb: "<< isSVb << ",isSVc: " << isSVc << ",isSVgen: " << std::endl;
-         evt_.nGoodSV++;
-         evt_.ptSV.push_back(sv.pt()); 
-         evt_.etaSV.push_back(sv.eta());
-         evt_.phiSV.push_back(sv.phi());
-         evt_.energySV.push_back(sv.energy());
-         evt_.massSV.push_back(sv.mass());
-         evt_.isMatchedToJetSV.push_back(isSVInJetDir);
-         evt_.chi2SV.push_back(sv.vertexChi2()); 
-         evt_.normChi2SV.push_back(sv.vertexNormalizedChi2());
-         evt_.dxySV.push_back(d2d.value());
-         evt_.dxyerrSV.push_back(d2d.error());
-         evt_.dxysigSV.push_back(d2d.significance());  
-         evt_.d3dSV.push_back(dl.value());
-         evt_.d3derrSV.push_back(dl.error());
-         evt_.d3dsigSV.push_back(dl.significance());
-         evt_.costhetaSvPvSV.push_back(cosPdotV);
-         evt_.ntrkSV.push_back(sv.numberOfSourceCandidatePtrs());
-         evt_.ndauSV.push_back(ndaus);
-         evt_.ndofSV.push_back(sv.vertexNdof());
-         evt_.isSVb.push_back(isSVb);
-         evt_.isSVc.push_back(isSVc);
-         evt_.isSVgen.push_back(isSVgen);
+      //SV track separation from jets     
+      bool isSVInJetDir = false;      
+      for (const pat::Jet & jet : *ak4jets ){
+         GlobalVector flightDir(sv.vertex().x() - pv.x(), sv.vertex().y() - pv.y(), sv.vertex().z() - pv.z());
+         GlobalVector jetDir(jet.px(),jet.py(),jet.pz());
+         if(reco::deltaR(flightDir, jetDir ) <=  jetdRSV_) {//0.4
+            isSVInJetDir = true; break;}
       }
+      bool cut5 = !isSVInJetDir; 
+      if(cut5)                      {h1_["cutflow"] -> Fill(5, genwt);}
+      
+      //distance in the transverse plane between the SV and PV
+      Measurement1D d2d= vdistXY.distance(pv, VertexState(RecoVertex::convertPos(sv.position()), RecoVertex::convertError(sv.error()))); 
+      bool cut6 = d2d.value() < d2dSV_;
+      if(cut5 && cut6)              {h1_["cutflow"] -> Fill(6, genwt);} //3
+      
+      //pointing angle (i.e. the angle between the sum of the momentum of the 
+      //tracks in the SV and the flight direction betwen PV and SV)  
+      double dx = (sv.vx() - pv.x()), dy = (sv.vy() - pv.y()), dz = (sv.vz() - pv.z());    
+      double cosPdotV = (dx * sv.px() + dy*sv.py() + dz*sv.pz())/(sv.p()*std::sqrt(dx * dx + dy * dy + dz * dz));
+      bool cut7 =  cosPdotV > cosPdotVSV_;    
+      if(cut5 && cut6 && cut7)      {h1_["cutflow"] -> Fill(7, genwt);}//0.98
+      
+      //Number of tracks
+      double ndaus  = sv.numberOfDaughters();
+      bool cut8 = ndaus > ndauSV_;
+      if(cut5 && cut6 && cut7 && cut8)         {h1_["cutflow"] -> Fill(8, genwt);} //2 
+      
+      //significance of distance in 3d space point between the SV and PV
+      Measurement1D dl= vdist.distance(pv, VertexState(RecoVertex::convertPos(sv.position()), RecoVertex::convertError(sv.error())));
+      bool cut9 = dl.significance() > dlenSigSV_;
+      if(cut5 && cut6 && cut7 && cut8 && cut9) {h1_["cutflow"] -> Fill(9, genwt);}//4
+      
+      //Fill the branches
+      evt_.nGoodSV++;
+      evt_.ptSV.push_back(sv.pt()); 
+      evt_.etaSV.push_back(sv.eta());
+      evt_.phiSV.push_back(sv.phi());
+      evt_.energySV.push_back(sv.energy());
+      evt_.massSV.push_back(sv.mass());
+      evt_.isMatchedToJetSV.push_back(isSVInJetDir);
+      evt_.chi2SV.push_back(sv.vertexChi2()); 
+      evt_.normChi2SV.push_back(sv.vertexNormalizedChi2());
+      evt_.dxySV.push_back(d2d.value());
+      //evt_.dxyerrSV.push_back(catchInfsAndBound(d2d.error()-2,0,-2,0));
+      evt_.dxyerrSV.push_back(d2d.error());
+      evt_.dxysigSV.push_back(d2d.significance());  
+      evt_.d3dSV.push_back(dl.value());
+      evt_.d3derrSV.push_back(dl.error());
+      evt_.d3dsigSV.push_back(dl.significance());
+      evt_.costhetaSvPvSV.push_back(cosPdotV);
+      evt_.ntrkSV.push_back(sv.numberOfSourceCandidatePtrs());
+      evt_.ndauSV.push_back(ndaus);
+      evt_.ndofSV.push_back(sv.vertexNdof());
+      evt_.isSVb.push_back(isSVb);
+      evt_.isSVc.push_back(isSVc);
+      evt_.isSVgen.push_back(isSVgen);
+      evt_.matchedGenPtSV.push_back(matchGenPt);
+      evt_.matchedGenEtaSV.push_back(matchGenEta);
+      evt_.matchedGenMassSV.push_back(matchGenMass);
+      evt_.matchedGenPhiSV.push_back(matchGenPhi);
    }
    //std::cout << "???" << std::endl; 
    tree_->Fill();
@@ -414,17 +422,19 @@ void
 KUNtuplizer::beginJob()
 {
    tree_ = fs_->make<TTree>("svtree", "svtree") ;
-   evt_.RegisterTree(tree_, "SelectedEvt") ;
+   evt_.RegisterTree(tree_, "Evt") ;
    genevt_.RegisterTree(tree_, "GenEvt") ;
-   h1_["cutflow"] = fs_->make<TH1D>("cutflow SV", "cut flow", 8, 0.5, 8.5) ;
+
+   h1_["cutflow"] = fs_->make<TH1D>("cutflow SV", "cut flow", 9, 0.5, 9.5) ;
    h1_["cutflow"] -> GetXaxis() -> SetBinLabel(1, "allSV") ;
-   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(2, "p_{T} #leq 20") ;
-   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(3, "#DeltaR(SV,genPart)>0.4") ;
-   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(4, "#DeltaR(SV,j)>0.4") ;
-   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(5, "IP2D < 3") ;
-   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(6, "cos#theta_{PV,SV} > 0.98") ;
-   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(7, "ndau > 2") ; 
-   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(8, "SIP3D > 4") ;    
+   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(2, "SV p_{T} #leq 20") ;
+   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(3, "#DeltaR(SV,pgen)>0.4") ;
+   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(4, "#DeltaR(SV,bgen)>0.4") ;
+   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(5, "#DeltaR(SV,j)>0.4") ;
+   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(6, "IP2D < 3") ;
+   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(7, "cos#theta_{PV,SV} > 0.98") ;
+   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(8, "ndau > 2") ; 
+   h1_["cutflow"] -> GetXaxis() -> SetBinLabel(9, "SIP3D > 4") ;    
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
@@ -441,6 +451,27 @@ KUNtuplizer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.setUnknown();
   descriptions.addDefault(desc);
+}
+
+
+const float& 
+KUNtuplizer::catchInfs(const float& in,const float& replace_value) {
+  if(in==in){
+    if(std::isinf(in))
+      return replace_value;
+    else if(in < -1e32 || in > 1e32)
+      return replace_value;
+    return in;
+  }
+  return replace_value;
+}
+
+float 
+KUNtuplizer::catchInfsAndBound(const float& in,const float& replace_value, const float& lowerbound, const float& upperbound) {
+  float withoutinfs=catchInfs(in,replace_value);
+  if(withoutinfs<lowerbound) return lowerbound;
+  if(withoutinfs>upperbound) return upperbound;
+  return withoutinfs;
 }
 
 //define this as a plug-in
