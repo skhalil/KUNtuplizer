@@ -18,7 +18,9 @@ class EventInfoTree {
     std::vector<float> chi2Vtx;
     std::vector<float> zVtx;
     std::vector<float> rhoVtx;
-    std::vector<float> ptVtx;
+    std::vector<float> etaVtx;
+    std::vector<float> phiVtx;
+    
 
     int    nSV;
     int    nGoodSV;
@@ -27,7 +29,9 @@ class EventInfoTree {
     std::vector<float> phiSV;
     std::vector<float> energySV;
     std::vector<float> massSV;
-    std::vector<int>   isMatchedToJetSV; 
+    std::vector<int>   isMatchedToJetSV;
+    std::vector<float> dRFlightJetSV;
+    std::vector<float> dRJetSV; 
     std::vector<float> chi2SV;
     std::vector<float> normChi2SV;
     std::vector<float> dxySV;
@@ -40,20 +44,37 @@ class EventInfoTree {
     std::vector<int>   ntrkSV;
     std::vector<int>   ndauSV;
     std::vector<int>   ndofSV;
+    std::vector<int>   isSVgen;
     std::vector<int>   isSVb;
     std::vector<int>   isSVc;
-    std::vector<int>   isSVgen;
+    std::vector<int>   isSVl;
+    std::vector<int>   isSVo;
+    std::vector<int>   isSVbg;
+    std::vector<int>   isSVcg;
+    std::vector<int>   nbsSV;
+    std::vector<int>   ncsSV;
+    std::vector<int>   nlsSV;
+    std::vector<int>   ngsSV;
+    std::vector<int>   nothersSV;
+    std::vector<int>   isMatchedtoGenSV;  
+    std::vector<int>   matchedGenIsHardProcess;
+    std::vector<int>   matchedGenIsLastCopyBeforeFSR;
     std::vector<float> matchedGenPtSV;
     std::vector<float> matchedGenEtaSV;
     std::vector<float> matchedGenMassSV;
     std::vector<float> matchedGenPhiSV;
+    std::vector<float> matchedGenEnergySV;
+    std::vector<int>   matchedGenMomSV;
+    std::vector<float> matchedGenMindRSV;
+    std::vector<float> matchedGendRSV;
 
     void clearTreeVectors() {
        ndofVtx.clear();
        chi2Vtx.clear();
        zVtx.clear();
        rhoVtx.clear();
-       ptVtx.clear();
+       etaVtx.clear();
+       phiVtx.clear();
        
        ptSV.clear();
        etaSV.clear();
@@ -61,6 +82,8 @@ class EventInfoTree {
        energySV.clear();
        massSV.clear();
        isMatchedToJetSV.clear();
+       dRFlightJetSV.clear();
+       dRJetSV.clear(); 
        chi2SV.clear();
        normChi2SV.clear();
        dxySV.clear();
@@ -73,13 +96,29 @@ class EventInfoTree {
        ntrkSV.clear();
        ndauSV.clear();
        ndofSV.clear();
+       isSVgen.clear();
        isSVb.clear();
        isSVc.clear();
-       isSVgen.clear();
+       isSVl.clear();
+       isSVbg.clear();
+       isSVcg.clear();
+       isSVo.clear();
+       nbsSV.clear();
+       ncsSV.clear();
+       nlsSV.clear();
+       ngsSV.clear();
+       nothersSV.clear();
+       isMatchedtoGenSV.clear();
+       matchedGenIsLastCopyBeforeFSR.clear();
+       matchedGenIsHardProcess.clear();
        matchedGenPtSV.clear();
        matchedGenEtaSV.clear();
        matchedGenMassSV.clear();
        matchedGenPhiSV.clear();
+       matchedGenMomSV.clear();
+       matchedGenMindRSV.clear();
+       matchedGenEnergySV.clear();
+       matchedGendRSV.clear();
     }
 
     void RegisterTree(TTree* tree, std::string name="Evts") {
@@ -96,7 +135,8 @@ class EventInfoTree {
       tree->Branch((name+"_chi2Vtx").c_str(), &chi2Vtx);
       tree->Branch((name+"_zVtx").c_str(),    &zVtx);
       tree->Branch((name+"_rhoVtx").c_str(),  &rhoVtx); 
-      tree->Branch((name+"_ptVtx").c_str(),   &ptVtx);
+      tree->Branch((name+"_etaVtx").c_str(),  &etaVtx);
+      tree->Branch((name+"_phiVtx").c_str(),  &phiVtx);
       
       tree->Branch((name+"_nSV").c_str(),             &nSV,      (name+"_nSV/I").c_str());
       tree->Branch((name+"_nGoodSV").c_str(),         &nGoodSV,  (name+"_nGoodSV/I").c_str());
@@ -106,6 +146,8 @@ class EventInfoTree {
       tree->Branch((name+"_energySV").c_str(),        &energySV);
       tree->Branch((name+"_massSV").c_str(),          &massSV);
       tree->Branch((name+"_isMatchedToJetSV").c_str(),&isMatchedToJetSV);
+      tree->Branch((name+"_dRFlightJetSV").c_str(),   &dRFlightJetSV);
+      tree->Branch((name+"_dRJetSV").c_str(),         &dRJetSV);
       tree->Branch((name+"_chi2SV").c_str(),          &chi2SV); 
       tree->Branch((name+"_normChi2SV").c_str(),      &normChi2SV);
       tree->Branch((name+"_dxySV").c_str(),           &dxySV); 
@@ -118,13 +160,28 @@ class EventInfoTree {
       tree->Branch((name+"_ntrkSV").c_str(),          &ntrkSV);
       tree->Branch((name+"_ndauSV").c_str(),          &ndauSV);
       tree->Branch((name+"_ndofSV").c_str(),          &ndofSV);
+      tree->Branch((name+"_isSVgen").c_str(),         &isSVgen);
       tree->Branch((name+"_isSVb").c_str(),           &isSVb);
       tree->Branch((name+"_isSVc").c_str(),           &isSVc);
-      tree->Branch((name+"_isSVgen").c_str(),         &isSVgen);
+      tree->Branch((name+"_isSVl").c_str(),           &isSVl);
+      tree->Branch((name+"_isSVo").c_str(),           &isSVo);
+      tree->Branch((name+"_isSVbg").c_str(),          &isSVbg);
+      tree->Branch((name+"_isSVcg").c_str(),          &isSVcg);
+      tree->Branch((name+"_nbsSV").c_str(),           &nbsSV);
+      tree->Branch((name+"_ncsSV").c_str(),           &ncsSV);
+      tree->Branch((name+"_nlsSV").c_str(),           &nlsSV);
+      tree->Branch((name+"_ngsSV").c_str(),           &ngsSV);
+      tree->Branch((name+"_nothersSV").c_str(),       &nothersSV);
+      tree->Branch((name+"_isMatchedtoGenSV").c_str(),&isMatchedtoGenSV);         
+      tree->Branch((name+"_matchedGenIsLastCopyBeforeFSR").c_str(),  &matchedGenIsLastCopyBeforeFSR);
+      tree->Branch((name+"_matchedGenIsHardProcess").c_str(),        &matchedGenIsHardProcess);
       tree->Branch((name+"_matchedGenPtSV").c_str(),  &matchedGenPtSV);
       tree->Branch((name+"_matchedGenEtaSV").c_str(), &matchedGenEtaSV);
       tree->Branch((name+"_matchedGenMassSV").c_str(),&matchedGenMassSV);
       tree->Branch((name+"_matchedGenPhiSV").c_str(), &matchedGenPhiSV);
-   
+      tree->Branch((name+"_matchedGenMomSV").c_str(), &matchedGenMomSV);
+      tree->Branch((name+"_matchedGenMindRSV").c_str(),&matchedGenMindRSV);
+      tree->Branch((name+"_matchedGenEnergySV").c_str(),   &matchedGenEnergySV);
+      tree->Branch((name+"_matchedGendRSV").c_str(),  &matchedGendRSV);
     }
 };
