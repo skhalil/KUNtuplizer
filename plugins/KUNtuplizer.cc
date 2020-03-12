@@ -433,6 +433,32 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       bool cut9 = dl.significance() > dlenSigSV_;
       if(cut4 && cut5 && cut6 && cut7 && cut8 && cut9) {h1_["cutflow"] -> Fill(9, genwt);}//4
       
+      //Add track based info
+      math::XYZVector svDir = sv.momentum().Unit();
+      TVector3 svDir3(svDir.x(), svDir.y(), svDir.z());
+      
+      for (unsigned int i = 0; i < sv.numberOfDaughters(); i++) {
+        auto const* cand = sv.daughter(i);
+        auto packed_cand = dynamic_cast<const pat::PackedCandidate*>(cand);
+        auto pf_cand = dynamic_cast<const reco::PFCandidate*>(cand);
+
+        // deal with PAT/AOD polymorphism to get track
+        const reco::Track *track_ptr = nullptr;
+
+        if (pf_cand){
+           track_ptr = pf_cand->bestTrack();  // trackRef was sometimes null
+        }
+        else if (packed_cand && packed_cand->hasTrackDetails()){ // if no track info is available, this will give an exception
+           track_ptr = &(packed_cand->pseudoTrack());
+        }
+                
+        math::XYZVector trackMom = track_ptr->momentum();
+        TVector3 trackMom3(trackMom.x(), trackMom.y(), trackMom.z());       
+        double trackDeltaR = reco::deltaR(trackMom, svDir);
+        double trackPtRel  = trackMom3.Perp(svDir3); 
+        std::cout << "trackDeltaR = " << trackDeltaR << ",trackPtRel = " << trackPtRel << std::endl;       
+      }
+
       //Fill the branches
       evt_.nGoodSV++;
       evt_.ptSV.push_back(sv.pt()); 
