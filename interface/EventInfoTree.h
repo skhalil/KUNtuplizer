@@ -67,7 +67,20 @@ class EventInfoTree {
     std::vector<int>   matchedGenMomSV;
     std::vector<float> matchedGenMindRSV;
     std::vector<float> matchedGendRSV;
-
+    std::vector<float> trkDeltaRSV;
+    std::vector<float> trkPtRelSV;
+    std::vector<float> trkEtaSV;
+    std::vector<float> trkEtaRelSV;
+    std::vector<float> trkPParSV;
+    std::vector<float> trkPtRatioSV;  
+    std::vector<float> trkPParRatioSV;   
+    std::vector<float> trkSip2dValSV;
+    std::vector<float> trkSip2dSigSV;
+    std::vector<float> trkSip3dValSV;
+    std::vector<float> trkSip3dSigSV;
+    std::vector<float> trkSVDistValSV;
+    std::vector<float> trkSVDistSigSV;
+     
     void clearTreeVectors() {
        ndofVtx.clear();
        chi2Vtx.clear();
@@ -119,6 +132,19 @@ class EventInfoTree {
        matchedGenMindRSV.clear();
        matchedGenEnergySV.clear();
        matchedGendRSV.clear();
+       trkDeltaRSV.clear();
+       trkPtRelSV.clear();
+       trkEtaSV.clear();
+       trkEtaRelSV.clear();
+       trkPParSV.clear();
+       trkPtRatioSV.clear();
+       trkPParRatioSV.clear();
+       trkSip2dValSV.clear();
+       trkSip2dSigSV.clear();
+       trkSip3dValSV.clear();
+       trkSip3dSigSV.clear();
+       trkSVDistValSV.clear();
+       trkSVDistSigSV.clear();
     }
 
     void RegisterTree(TTree* tree, std::string name="Evts") {
@@ -183,5 +209,18 @@ class EventInfoTree {
       tree->Branch((name+"_matchedGenMindRSV").c_str(),&matchedGenMindRSV);
       tree->Branch((name+"_matchedGenEnergySV").c_str(),   &matchedGenEnergySV);
       tree->Branch((name+"_matchedGendRSV").c_str(),  &matchedGendRSV);
+      tree->Branch((name+"_trkDeltaRSV").c_str(), &trkDeltaRSV);
+      tree->Branch((name+"_trkPtRelSV").c_str(), &trkPtRelSV);
+      tree->Branch((name+"_trkEtaSV").c_str(), &trkEtaSV);
+      tree->Branch((name+"_trkEtaRelSV").c_str(), &trkEtaRelSV);
+      tree->Branch((name+"_trkPParSV").c_str(), &trkPParSV);
+      tree->Branch((name+"_trkPtRatioSV").c_str(), &trkPtRatioSV);
+      tree->Branch((name+"_trkPParRatioSV").c_str(), &trkPParRatioSV);
+      tree->Branch((name+"_trkSip2dValSV").c_str(), &trkSip2dValSV);
+      tree->Branch((name+"_trkSip2dSigSV").c_str(), &trkSip2dSigSV);
+      tree->Branch((name+"_trkSip3dValSV").c_str(), &trkSip3dValSV);
+      tree->Branch((name+"_trkSip3dSigSV").c_str(), &trkSip3dSigSV);
+      tree->Branch((name+"_trkSVDistValSV").c_str(), &trkSVDistValSV);
+      tree->Branch((name+"_trkSVDistSigSV").c_str(), &trkSVDistSigSV);
     }
 };

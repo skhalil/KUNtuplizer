@@ -34,24 +34,29 @@
 #include "SimDataFormats/GeneratorProducts/interface/LHEEventProduct.h"
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
-#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
-#include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
+#include "DataFormats/GeometryCommonDetAlgo/interface/Measurement1D.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/Candidate/interface/VertexCompositePtrCandidate.h"
-#include "TrackingTools/IPTools/interface/IPTools.h"
 #include "DataFormats/Math/interface/deltaR.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackExtra.h"
-#include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/MuonCocktails.h"
-#include "DataFormats/GeometryCommonDetAlgo/interface/Measurement1D.h"
+#include "DataFormats/JetReco/interface/GenJet.h"
+#include "DataFormats/BTauReco/interface/SecondaryVertexTagInfo.h"
+#include "DataFormats/BTauReco/interface/CandSecondaryVertexTagInfo.h"
+#include "DataFormats/BTauReco/interface/TaggingVariable.h"
+#include "DataFormats/BTauReco/interface/VertexTypes.h"
+#include "DataFormats/BTauReco/interface/ParticleMasses.h"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
+#include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
+#include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/Electron.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
-#include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/PatCandidates/interface/MET.h"
 
+#include "TrackingTools/IPTools/interface/IPTools.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
 #include "TrackingTools/Records/interface/TransientTrackRecord.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrack.h"
@@ -111,6 +116,7 @@ class KUNtuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
    edm::EDGetTokenT< reco::ConversionCollection >                conv_;
    edm::EDGetTokenT< reco::BeamSpot >                            beamSpot_;
    edm::EDGetTokenT< double >                                    rho_;
+   //edm::ESHandle<TransientTrackBuilder>                          builder_;
    edm::Service<TFileService>                                    fs_;
    std::map<std::string, TH1D*>                                  h1_; 
    TTree*        tree_;    
@@ -289,6 +295,9 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    VertexDistance3D vdist;  
    VertexDistanceXY vdistXY;
    
+   edm::ESHandle<TransientTrackBuilder> builder_;
+   iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", builder_);
+   
    for (const auto & sv : *secVertices) {
 
       h1_["cutflow"] -> Fill(1, genwt);
@@ -296,16 +305,19 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       //sum pt of all tracks in SV
       if(sv.pt() > ptMaxSV_) continue;//20
       h1_["cutflow"] -> Fill(2, genwt);
+   
+      //SV direction vector, SV flight direction w.r.t PV 
+      math::XYZVector svDirU = sv.momentum().Unit();
+      TVector3 svDir3(svDirU.x(), svDirU.y(), svDirU.z());      
+      GlobalVector svDir(sv.px(), sv.py(), sv.pz());
+      GlobalVector svDirPV(sv.vertex().x() - pv.x(), sv.vertex().y() - pv.y(), sv.vertex().z() - pv.z()); 
 
-
-
+      //SV track separation from jets     
       bool isSVInJetDir = false;  float dRSVJet = -100.0; float dRSVFlightJet = -100.0;    
       for (const pat::Jet & jet : *ak4jets ){
-         GlobalVector svDir(sv.px(), sv.py(), sv.pz());
-         GlobalVector flightDir(sv.vertex().x() - pv.x(), sv.vertex().y() - pv.y(), sv.vertex().z() - pv.z());
          GlobalVector jetDir(jet.px(),jet.py(),jet.pz());
          dRSVJet = reco::deltaR(svDir, jetDir );
-         dRSVFlightJet = reco::deltaR(flightDir, jetDir);
+         dRSVFlightJet = reco::deltaR(svDirPV, jetDir);
          if(dRSVFlightJet <=  jetdRSV_) {//0.4
             isSVInJetDir = true; break;}
       }
@@ -337,19 +349,12 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
          if (genSVdR > maxdR)  { maxdR = genSVdR;}
          
          if (genSVdR <= genPartdRSV_){ 
-            p = true; 
-            
-            //std::cout << "SV with pt "<< sv.p4().pt() << " is matched to p = " << gp.pdgId() << std::endl;
-            //std::cout << "matchGenSVdR : " << matchGenSVdR << std::endl;
-
+            p = true;             
             int pdgid = abs(gp.pdgId());
-
             isbMeson = pdgid%1000 > 500 && pdgid%1000 < 600;
             isbBaryon = pdgid > 5000 &&  pdgid < 6000;
-            
             iscMeson = pdgid%1000 > 400 && pdgid%1000 < 500;
             iscBaryon = pdgid > 4000 &&  pdgid < 5000;
-
             islMeson = pdgid%1000 > 100 && pdgid%1000 < 400;
             islBaryon = pdgid > 1000 &&  pdgid < 4000;
                   
@@ -358,10 +363,9 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             else if (pdgid == 21)                         {g=true; ngs++;} // 9 is excluded
             else if (pdgid == 1  || pdgid == 2 || pdgid == 3 || islMeson || islBaryon) {l=true;nls++;}
             else    {nothers++;}
-            
-            if (nbs+ncs == 0 && fill1stNotHeavyGen == false){// if matched to a non-b particle, store the P4 of the leading non-b particle
-               //std::cout << "leading not gen P4 stored " << std::endl;
-               
+
+            // if matched to a non-b particle, store the P4 of the leading non-b particle
+            if (nbs+ncs == 0 && fill1stNotHeavyGen == false){                           
                matchGenSVdR   = genSVdR; 
                matchGenPt     = gp.p4().pt();               
                matchGenEta    = gp.p4().eta();
@@ -371,11 +375,9 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                matchGenMomID               = gp.mother()->pdgId();               
                matchGenIsHardProcess       = gp.isHardProcess();              
                matchGenIsLastCopyBeforeFSR = gp.statusFlags().isLastCopyBeforeFSR();               
-               fill1stNotHeavyGen = true;
-               
-            }
-            else if (nbs+ncs != 0 && fill1stHeavyGen == false) {// if a b or c quark is found, then overwrite the P4 to the leading one
-               //std::cout << "leading heavy quark P4 stored " << std::endl;
+               fill1stNotHeavyGen = true;               
+            }// if a b or c quark is found, then overwrite the P4 to the leading one
+            else if (nbs+ncs != 0 && fill1stHeavyGen == false) {
                matchGenSVdR   = genSVdR; 
                matchGenPt     = gp.p4().pt();
                matchGenEta    = gp.p4().eta();
@@ -396,20 +398,9 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
          if(cut5){ h1_["cutflow"] -> Fill(5, genwt);} 
          if(b && g) {bg = true;} 
          if(c && g) {cg = true;}
-         //if(ncs>0)    {c = true;}
-         //if(nls>0)    {l = true;} 
          if(nbs+ncs+nls == 0){o = true;}            
       }
-      //else continue;
-
-      //std::cout << "end the gen loop ----> " << std::endl;
-      //std::cout << "genSVdR : " << genSVdR << ", matchGenSVdR :" << matchGenSVdR << std::endl;
-      //std::cout << "mindR : " << mindR <<", maxdR : " << maxdR << std::endl;
-      //std::cout << "nbs " << nbs <<", ncs " << ncs << ", nls " << nls << ", ngs " << ngs << std::endl;
-      //std::cout << "b " << b << ", bg " <<bg << ", c " << c <<", l " << l << ", other " << o << std::endl;
-      //SV track separation from jets     
-
-      
+     
       //distance in the transverse plane between the SV and PV
       Measurement1D d2d= vdistXY.distance(pv, VertexState(RecoVertex::convertPos(sv.position()), RecoVertex::convertError(sv.error()))); 
       bool cut6 = d2d.value() < d2dSV_;
@@ -434,15 +425,17 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       if(cut4 && cut5 && cut6 && cut7 && cut8 && cut9) {h1_["cutflow"] -> Fill(9, genwt);}//4
       
       //Add track based info
-      math::XYZVector svDir = sv.momentum().Unit();
-      TVector3 svDir3(svDir.x(), svDir.y(), svDir.z());
-      
+      double trackDeltaR(0.);   double trackPtRel(0.);   double trackPtRatio(0.);
+      double trackEta(0.);      double trackEtaRel(0.);  double trackPPar(0.);     double trackPParRatio(0.);
+      double trackSip2dVal(0.); double trackSip2dSig(0.);double trackSip3dVal(0.); double trackSip3dSig(0.);
+      double trackSVDistVal(0.);double trackSVDistSig(0.);
+
       for (unsigned int i = 0; i < sv.numberOfDaughters(); i++) {
         auto const* cand = sv.daughter(i);
         auto packed_cand = dynamic_cast<const pat::PackedCandidate*>(cand);
         auto pf_cand = dynamic_cast<const reco::PFCandidate*>(cand);
 
-        // deal with PAT/AOD polymorphism to get track
+        // deal with PAT/AOD polymorphism to get the track
         const reco::Track *track_ptr = nullptr;
 
         if (pf_cand){
@@ -453,13 +446,52 @@ KUNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         }
                 
         math::XYZVector trackMom = track_ptr->momentum();
-        TVector3 trackMom3(trackMom.x(), trackMom.y(), trackMom.z());       
-        double trackDeltaR = reco::deltaR(trackMom, svDir);
-        double trackPtRel  = trackMom3.Perp(svDir3); 
-        std::cout << "trackDeltaR = " << trackDeltaR << ",trackPtRel = " << trackPtRel << std::endl;       
+        double trackMag          = std::sqrt(trackMom.Mag2());
+        TVector3 trackMom3(trackMom.x(), trackMom.y(), trackMom.z()); 
+      
+        trackDeltaR    = reco::deltaR(trackMom, svDirU);
+        trackPtRel     = trackMom3.Perp(svDir3); 
+        trackEta       = trackMom.Eta();
+        trackEtaRel    = reco::btau::etaRel(svDirU, trackMom);
+        trackPPar      = svDirU.Dot(trackMom);
+        trackPtRatio   = trackMom3.Perp(svDir3) / trackMag;
+        trackPParRatio = svDirU.Dot(trackMom) / trackMag;
+        
+        // Use transient track that has a pointer to the magnetic field, and geometry to estimate  
+        // track parameters along the track trajectory 
+        reco::TransientTrack transientTrack;
+        transientTrack = builder_->build(*track_ptr);
+
+        //Extrapolate the track to the point of closest approach to the PV in transverse (3D) plane to compute IP and its error
+        Measurement1D meas_ip2d = IPTools::signedTransverseImpactParameter(transientTrack, svDir, pv).second;
+        Measurement1D meas_ip3d = IPTools::signedImpactParameter3D(transientTrack, svDir, pv).second;
+        trackSip2dVal = static_cast<float>(meas_ip2d.value());
+        trackSip2dSig = static_cast<float>(meas_ip2d.significance());
+        trackSip3dVal = static_cast<float>(meas_ip3d.value());
+        trackSip3dSig = static_cast<float>(meas_ip3d.significance());
+
+        //Extrapolate the track to the point of closest approach to the SV axis
+        Measurement1D svdist = IPTools::jetTrackDistance(transientTrack, svDir, pv).second;
+        trackSVDistVal = static_cast<float>(svdist.value());
+        trackSVDistSig = static_cast<float>(svdist.significance());
+        
+        // Fill the branches 
+        evt_.trkDeltaRSV.push_back(trackDeltaR); 
+        evt_.trkPtRelSV.push_back(trackPtRel); 
+        evt_.trkEtaSV.push_back(trackEta); 
+        evt_.trkEtaRelSV.push_back(trackEtaRel); 
+        evt_.trkPParSV.push_back(trackPPar);
+        evt_.trkPtRatioSV.push_back(trackPtRatio);
+        evt_.trkPParRatioSV.push_back(trackPParRatio); 
+        evt_.trkSip2dValSV.push_back(trackSip2dVal);
+        evt_.trkSip2dSigSV.push_back(trackSip2dSig);
+        evt_.trkSip3dValSV.push_back(trackSip3dVal);
+        evt_.trkSip3dSigSV.push_back(trackSip3dSig);
+        evt_.trkSVDistValSV.push_back(trackSVDistVal);
+        evt_.trkSVDistSigSV.push_back(trackSVDistSig); 
       }
 
-      //Fill the branches
+      //Fill all other the branches
       evt_.nGoodSV++;
       evt_.ptSV.push_back(sv.pt()); 
       evt_.etaSV.push_back(sv.eta());

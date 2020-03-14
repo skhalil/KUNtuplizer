@@ -76,4 +76,6 @@
 <use name="Geometry/TrackerGeometryBuilder"/>
 <use name="Geometry/EcalAlgo"/>
 <use name="Geometry/CSCGeometry"/>
+<use name="TrackingTools/TransientTrack">
+<use name="TrackingTools/Records">
 <flags EDM_PLUGIN="1"/>

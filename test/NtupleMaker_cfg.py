@@ -97,9 +97,13 @@ from Configuration.AlCa.GlobalTag_condDBv2 import GlobalTag
 process.GlobalTag.globaltag = options.globalTag 
 
 # load geometry and electron/photon ID related modules
+process.load("TrackingTools/TransientTrack/TransientTrackBuilder_cfi")
+#process.load("Configuration.Geometry.GeometryIdeal_cff")
+process.load('Configuration.Geometry.GeometryRecoDB_cff')
 process.load("Configuration.EventContent.EventContent_cff")
 process.load('Configuration.StandardSequences.GeometryDB_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_cff')
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('RecoEgamma/PhotonIdentification/PhotonIDValueMapProducer_cfi')
 process.load('RecoEgamma.ElectronIdentification.ElectronIDValueMapProducer_cfi')
